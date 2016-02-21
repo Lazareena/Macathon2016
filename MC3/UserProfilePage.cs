@@ -6,49 +6,27 @@ using System.Linq;
 
 namespace MC3
 {
-	public class TheExperienceFeed : ContentPage
+	public class UserProfilePage : ContentPage
 	{
-		public ListView _listView;
-		public DemoRepository _rep;
-		private SearchBar _searchBar;
+		private ListView _listViewExperience;
 		private Image _addButton;
-		public TheExperienceFeed (List<Experience> experiences, DemoRepository rep)
+
+		public UserProfilePage (User user, DemoRepository rep, bool isRoot)
 		{
-			_listView = new ListView
+			_listViewExperience = new ListView 
 			{
 				// Source of data items.
-				ItemsSource = experiences,
+				ItemsSource = user.Experiences,
 
 				// Define template for displaying each item.
 				ItemTemplate = new DataTemplate(() =>
 					{
-						return new ExperienceCell();
+						return new ExperienceCellUserPage();
 					}),
-				HasUnevenRows = true
+				HasUnevenRows = true,
 
+					
 			};
-			_listView.ItemTapped += delegate(object sender, ItemTappedEventArgs e) {
-				Experience exp = e.Item as Experience;
-				ExperienceDetailPage detailPage = ExperienceDetailPage.CreatePage(exp, rep);
-				ParentView.Navigation.PushAsync(detailPage);
-				_listView.SelectedItem = null;
-			}; 
-
-			_searchBar = new SearchBar () { Placeholder = "Search by Organization or Experience" };
-
-			_searchBar.TextChanged += (sender, e) => {
-
-				if (string.IsNullOrWhiteSpace(e.NewTextValue))
-					_listView.ItemsSource = experiences;
-				else
-				{
-					var searchString = e.NewTextValue.ToLower();
-
-					_listView.ItemsSource = experiences.Where(i => i.OrganizationName.ToLower().Contains(searchString) ||
-						(i.Title.ToLower().Contains(searchString)));
-				}
-			};
-
 			_addButton = new Image { Aspect = Aspect.AspectFit };
 			ImageSource addButtonImage = ImageSource.FromResource ("MC3.SharedResources.AddButton3.png");
 			_addButton.Source = addButtonImage;
@@ -56,32 +34,40 @@ namespace MC3
 			var addTapped = new TapGestureRecognizer ();
 			addTapped.Tapped += async delegate {
 				var expPage = AddExperiencePage.CreatePage(rep);
-				await Navigation.PushAsync(expPage);
+				await ParentView.Navigation.PushAsync(expPage);
 			};
-				
 			_addButton.GestureRecognizers.Add (addTapped);
 
-			Title = "Main Feed";
-			Content = new StackLayout {
+			Title = "Profile";
+			StackLayout content = new StackLayout { 
 				BackgroundColor = Color.FromHex("#FFFFFF"),
+//				BackgroundColor = Color.FromHex("ffb2ebf2"),
 				Children = {
-					_searchBar,
-					_listView,
-					_addButton
+					new Label { Text = user.Name, FontSize = 20, FontAttributes = FontAttributes.Bold, XAlign = TextAlignment.Center },
+					new Label { Text = user.Major + ", " + user.ClassYear, FontSize= 18, XAlign = TextAlignment.Center }, 
+					new Label { Text = user.Email, FontSize =18, XAlign = TextAlignment.Center },
+					new Label { Text = user.PhoneNumber, FontSize =18, XAlign = TextAlignment.Center },
+					new BoxView { BackgroundColor= Color.FromHex("#ffd32f2f"), HeightRequest= 3 },
+					new Label { Text = "Experiences:", FontSize =18, XAlign = TextAlignment.Center },
+					new BoxView { BackgroundColor= Color.FromHex("#ffd32f2f"), HeightRequest= 3 },
+					_listViewExperience
 				}
 			};
+
+			if (isRoot) {
+				content.Children.Add (_addButton);
+			}
+			Content = content;
 		}
 
-		public static TheExperienceFeed CreateExperienceFeed (DemoRepository dataRep) {
-			List<Experience> experiences = dataRep.getExperiences();
-			return new TheExperienceFeed (experiences, dataRep);
+		public static UserProfilePage CreatePage(User user, DemoRepository rep, bool isRoot) {
+			return new UserProfilePage (user, rep, isRoot);
 		}
-			
 	}
 
-	public class ExperienceCell : ViewCell
+	public class ExperienceCellUserPage : ViewCell
 	{
-		public ExperienceCell()
+		public ExperienceCellUserPage()
 		{
 
 		}
@@ -100,10 +86,15 @@ namespace MC3
 			};
 			organization.SetBinding(Label.TextProperty, "OrganizationName");
 
-			BoxView underline = new BoxView { HeightRequest = 3, BackgroundColor= Color.FromHex ("ffb2ebf2"), WidthRequest= organization.Width };
-
-			Label exp = new Label { };
+			Label exp = new Label { FontSize = 15};
 			exp.SetBinding (Label.TextProperty, "Title");
+
+			Label paid = new Label { FontSize = 15 };
+			if (experience.Paid) {
+				paid.Text = "Paid";
+			} else {
+				paid.Text = "Unpaid";
+			}
 
 			Image logoforTime = new Image { Aspect = Aspect.AspectFit };
 			ImageSource snowflake = ImageSource.FromResource ("MC3.SharedResources.Snowflake4.png");
@@ -135,14 +126,15 @@ namespace MC3
 				}
 			};
 
-			grid.Children.Add (organization, 1,0);
-			grid.Children.Add (underline, 1, 1);
-			grid.Children.Add (exp, 1, 2);
-			grid.Children.Add (logoforTime,0,1,0,3);
+			grid.Children.Add (organization, 1, 0);
+			grid.Children.Add (exp, 1, 1);
+			grid.Children.Add (paid, 1, 2);
+			grid.Children.Add (logoforTime, 0, 1, 0, 3);
 
 			cellWrapper.Children.Add (grid);
 			View = cellWrapper;
 		}
 	}
-
 }
+
+
